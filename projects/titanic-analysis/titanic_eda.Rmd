@@ -1,0 +1,349 @@
+## **Dataset Description**
+
+### **Overview**
+
+The data has been split into two groups:
+
+-   training set (train.csv)
+
+-   test set (test.csv)
+
+**The training set** should be used to build your machine learning models. For the training set, we provide the outcome (also known as the “ground truth”) for each passenger. Your model will be based on “features” like passengers’ gender and class. You can also use [feature engineering](https://triangleinequality.wordpress.com/2013/09/08/basic-feature-engineering-with-the-titanic-data/)to create new features.
+
+**The test set** should be used to see how well your model performs on unseen data. For the test set, we do not provide the ground truth for each passenger. It is your job to predict these outcomes. For each passenger in the test set, use the model you trained to predict whether or not they survived the sinking of the Titanic.
+
+We also include **gender_submission.csv**, a set of predictions that assume all and only female passengers survive, as an example of what a submission file should look like.
+
+### **Data Dictionary**
+
+| **Variable** | **Definition**                              | **Key**                                        |
+|------------------|--------------------------|----------------------------|
+| survival     | Survival                                    | 0 = No, 1 = Yes                                |
+| pclass       | Ticket class                                | 1 = 1st, 2 = 2nd, 3 = 3rd                      |
+| sex          | Sex                                         |                                                |
+| Age          | Age in years                                |                                                |
+| sibsp        | \# of siblings / spouses aboard the Titanic |                                                |
+| parch        | \# of parents / children aboard the Titanic |                                                |
+| ticket       | Ticket number                               |                                                |
+| fare         | Passenger fare                              |                                                |
+| cabin        | Cabin number                                |                                                |
+| embarked     | Port of Embarkation                         | C = Cherbourg, Q = Queenstown, S = Southampton |
+
+### **Variable Notes**
+
+**pclass**: A proxy for socio-economic status (SES)\
+1st = Upper\
+2nd = Middle\
+3rd = Lower\
+\
+**age**: Age is fractional if less than 1. If the age is estimated, is it in the form of xx.5\
+\
+**sibsp**: The dataset defines family relations in this way...\
+Sibling = brother, sister, stepbrother, stepsister\
+Spouse = husband, wife (mistresses and fiancés were ignored)\
+\
+**parch**: The dataset defines family relations in this way...\
+Parent = mother, father\
+Child = daughter, son, stepdaughter, stepson\
+Some children travelled only with a nanny, therefore parch=0 for them.
+
+Membaca Dataset
+
+```{r}
+setwd('E:/datamining/titanic_prediction')
+train <- read.csv('train.csv')
+test <- read.csv('test.csv')
+```
+
+### Step :
+
+#### Eksplorasi Data
+
+Melihat struktur data train :
+
+```{r}
+str(train)
+```
+
+Ringkasan statistik data train :
+
+```{r}
+summary(train)
+```
+
+Melihat beberapa baris pertama data :
+
+```{r}
+head(train)
+```
+
+Memeriksa missing values :
+
+```{r}
+colSums(is.na(train))
+
+```
+
+Visualisasi distribusi variabel penting :
+
+```{r}
+
+library(ggplot2)
+```
+
+Visualisasi Survival berdasarkan Sex :
+
+```{r}
+ggplot(train, aes(x = Sex, fill = factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(title = "Survival Rate by Sex", y = "Proportion")
+```
+
+Visualisasi Survival berdasarkan Pclass :
+
+```{r}
+ggplot(train, aes(x = factor(Pclass), fill = factor(Survived))) +
+  geom_bar(position = "fill") +
+  labs(title = "Survival Rate by Pclass", y = "Proportion", x = "Pclass")
+```
+
+Visualisasi distribusi Age :
+
+```{r}
+ggplot(train, aes(x = Age)) +
+  geom_histogram(binwidth = 5, fill = "blue", alpha = 0.7) +
+  labs(title = "Distribution of Age")
+
+```
+
+#### Pembersihan Data
+
+Menangani missing values pada Age :
+
+```{r}
+median_age <- median(train$Age, na.rm = TRUE)
+train$Age[is.na(train$Age)] <- median_age
+test$Age[is.na(test$Age)] <- median_age
+```
+
+Menangani missing values pada Embarked :
+
+```{r}
+most_frequent_embarked <- names(sort(table(train$Embarked), decreasing = TRUE))[1]
+train$Embarked[train$Embarked == ""] <- most_frequent_embarked
+```
+
+Menangani missing values pada Fare di dataset test :
+
+```{r}
+median_fare <- median(test$Fare, na.rm = TRUE)
+test$Fare[is.na(test$Fare)] <- median_fare
+
+```
+
+Mengubah variabel kategorikal menjadi faktor :
+
+```{r}
+
+train$Survived <- as.factor(train$Survived)
+train$Pclass <- as.factor(train$Pclass)
+train$Sex <- as.factor(train$Sex)
+train$Embarked <- as.factor(train$Embarked)
+
+test$Pclass <- as.factor(test$Pclass)
+test$Sex <- as.factor(test$Sex)
+test$Embarked <- as.factor(test$Embarked)
+```
+
+Memeriksa hasil pembersihan :
+
+```{r}
+
+summary(train)
+summary(test)
+```
+
+#### Analisis Awal
+
+Korelasi antar variabel numerik :
+
+```{r}
+
+numeric_vars <- train[, sapply(train, is.numeric)]
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+print(cor_matrix)
+```
+
+Visualisasi korelasi :
+
+```{r}
+library(corrplot)
+corrplot(cor_matrix, method = "circle")
+```
+
+Analisis survival rate berdasarkan berbagai faktor :
+
+```{r}
+survival_by_sex <- table(train$Sex, train$Survived)
+prop.table(survival_by_sex, margin = 1)
+
+survival_by_pclass <- table(train$Pclass, train$Survived)
+prop.table(survival_by_pclass, margin = 1)
+
+survival_by_embarked <- table(train$Embarked, train$Survived)
+prop.table(survival_by_embarked, margin = 1)
+```
+
+Visualisasi survival rate berdasarkan Age dan Sex :
+
+```{r}
+ggplot(train, aes(x = Age, fill = Survived)) +
+  geom_density(alpha = 0.7) +
+  facet_wrap(~Sex) +
+  labs(title = "Survival Rate by Age and Sex")
+```
+
+#### Hasil analisis:
+
+**Struktur Data:**
+
+Dataset `train` memiliki 891 observasi dan 12 variabel. Beberapa variabel seperti '`Survived`', '`Pclass`', '`Sex`', dan '`Embarked`' telah diubah menjadi faktor sesuai dengan pembersihan data yang saya lakukan.
+
+**Missing Values:**
+
+Variabel '`Age`' memiliki 177 nilai yang hilang, yang telah kita tangani dengan menggunakan median. Tidak ada missing values pada variabel lain setelah pembersihan.
+
+**Statistik Deskriptif:**
+
+Survival rate keseluruhan adalah sekitar 38.38% (Mean dari '`Survived`'). Usia rata-rata penumpang adalah sekitar 29.36 tahun.
+
+**Korelasi:**
+
+Tidak ada korelasi yang sangat kuat antar variabel numerik. Ada korelasi positif moderat antara '`SibSp`' dan '`Parch`' (0.414), yang masuk akal karena keduanya terkait dengan ukuran keluarga.
+
+**Analisis Survival:**
+
+-   Berdasarkan Jenis Kelamin (`Sex`):
+
+    `Female` memiliki tingkat kelangsungan hidup yang jauh lebih tinggi (74.20%) dibandingkan `Male` (18.89%).
+
+-   Berdasarkan Kelas Tiket (`Pclass`):
+
+    Penumpang `kelas 1` memiliki tingkat kelangsungan hidup tertinggi (62.96%), diikuti oleh `kelas 2` (47.28%), dan `kelas 3` (24.24%).
+
+-   Berdasarkan Pelabuhan Keberangkatan (`Embarked`):
+
+    Penumpang yang naik di `Cherbourg (C)` memiliki tingkat kelangsungan hidup tertinggi (55.36%), diikuti oleh `Queenstown (Q)` dengan 38.96%, dan `Southampton (S)` dengan 33.90%.
+
+#### Pembuatan Model dan Prediksi
+
+Memuat library yang diperlukan
+
+```{r}
+
+library(randomForest)
+```
+
+##### Feature engineering sederhana
+
+```{r}
+
+train$Title <- gsub('(.*, )|(\\..*)', '', train$Name)
+train$Title[train$Title %in% c('Mlle', 'Ms')] <- 'Miss'
+train$Title[train$Title == 'Mme'] <- 'Mrs'
+train$Title[!(train$Title %in% c('Miss', 'Mrs', 'Mr', 'Master'))] <- 'Other'
+
+test$Title <- gsub('(.*, )|(\\..*)', '', test$Name)
+test$Title[test$Title %in% c('Mlle', 'Ms')] <- 'Miss'
+test$Title[test$Title == 'Mme'] <- 'Mrs'
+test$Title[!(test$Title %in% c('Miss', 'Mrs', 'Mr', 'Master'))] <- 'Other'
+```
+
+Mengubah variabel kategorikal menjadi faktor
+
+```{r}
+
+train$Title <- as.factor(train$Title)
+test$Title <- as.factor(test$Title)
+```
+
+#### Pembuatan Model
+
+```{r}
+
+set.seed(123) # Untuk reprodusibilitas
+model <- randomForest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + Title,
+                      data = train, ntree = 500)
+```
+
+#### Prediksi
+
+```{r}
+predictions <- predict(model, test)
+```
+
+Pembuatan File Submission
+
+```{r}
+submission <- data.frame(PassengerId = test$PassengerId, Survived = predictions)
+```
+
+Menyimpan file submission
+
+```{r}
+
+write.csv(submission, "titanic_submission.csv", row.names = FALSE)
+```
+
+Melihat beberapa baris pertama dari file submission
+
+```{r}
+
+head(submission)
+```
+
+Memeriksa struktur file submission
+
+```{r}
+
+str(submission)
+```
+
+Memastikan jumlah baris sesuai
+
+```{r}
+
+nrow(submission)
+```
+
+#### Kesimpulan
+
+Berdasarkan analisis dan pemodelan yang telah dilakukan pada dataset Titanic, dapat menarik beberapa kesimpulan penting yaitu :
+
+1.  **Faktor-faktor yang mempengaruhi kelangsungan hidup** :
+
+    -   Jenis kelamin (`Sex`) memiliki pengaruh yang sangat signifikan. Perempuan memiliki tingkat kelangsungan hidup yang jauh lebih tinggi (74.20%) dibandingkan laki-laki (18.89%).
+    -   Kelas tiket (`Pclass`) juga berpengaruh besar. Penumpang kelas 1 memiliki tingkat kelangsungan hidup tertinggi (62.96%), diikuti oleh kelas 2 (47.28%), dan kelas 3 (24.24%).
+    -   Pelabuhan keberangkatan (`Embarked`) memiliki pengaruh moderat, dengan penumpang dari Cherbourg memiliki tingkat kelangsungan hidup tertinggi.
+
+2.  Usia (`Age`) memiliki distribusi yang cukup luas, dengan median sekitar 28 tahun. Visualisasi menunjukkan bahwa anak-anak dan wanita muda memiliki tingkat kelangsungan hidup yang lebih tinggi.
+
+3.  **Feature engineering**, seperti ekstraksi gelar (`Title`) dari nama, memberikan informasi tambahan yang berguna untuk model.
+
+4.  **Model Random Forest** yang digunakan berhasil memprediksi kelangsungan hidup penumpang berdasarkan fitur-fitur yang tersedia. Namun, evaluasi lebih lanjut diperlukan untuk menilai akurasi dan performa model secara keseluruhan.
+
+5.  Pembersihan data, termasuk penanganan missing values, sangat penting untuk meningkatkan kualitas analisis dan prediksi.
+
+6.  Korelasi antar variabel numerik tidak terlalu kuat, menunjukkan bahwa sebagian besar fitur memberikan informasi yang unik.
+
+Analisis lebih lanjut :
+
+-   Melakukan feature engineering yang lebih mendalam, seperti menggabungkan informasi keluarga (`SibSp` dan `Parch`).
+
+-   Melakukan analisis lebih lanjut tentang interaksi antar variabel.
+
+-   Mengevaluasi model menggunakan metrik seperti akurasi, presisi, recall, dan F1-score.
+
+-   Menggunakan teknik cross-validation untuk memastikan model tidak overfitting.
+
+Kesimpulannya, analisis dataset Titanic ini memberikan wawasan berharga tentang faktor-faktor yang mempengaruhi kelangsungan hidup dalam bencana tersebut. Model yang dikembangkan dapat menjadi dasar untuk prediksi dan pemahaman yang lebih baik tentang dinamika keselamatan dalam situasi serupa.
