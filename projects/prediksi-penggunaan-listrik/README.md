@@ -3,8 +3,10 @@
 Project ini digunakan untuk menganalisis dan memprediksi konsumsi listrik harian berdasarkan data cuaca.
 
 ## Files
-- `dataset-cuaca.csv` : Dataset berisi data cuaca harian (suhu, kelembapan, dll)
-- `model-training.ipynb` : Notebook untuk eksplorasi, preprocessing, dan pelatihan model ML
+## Dataset
+- `train.csv` : Dataset pelatihan berisi fitur cuaca dan konsumsi listrik aktual.
+- `test.csv` : Dataset pengujian tanpa kolom target.
+- `submission.csv` : File hasil prediksi untuk dikumpulkan ke sistem evaluasi.
 
 ## Tools
 - Python (pandas, sklearn)
